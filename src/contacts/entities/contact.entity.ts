@@ -11,7 +11,7 @@ export class Contact {
   @Column({ nullable: true })
   email: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: null })
   linkedId: number;
 
   @Column({ type: 'enum', enum: ['primary', 'secondary'] })
