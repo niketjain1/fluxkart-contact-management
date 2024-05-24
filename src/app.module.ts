@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { ContactsModule } from './contacts/contacts.module';
+import { Contact } from './contacts/entities/contact.entity';
 
 @Module({
   imports: [ConfigModule.forRoot(),
@@ -18,7 +19,7 @@ import { ContactsModule } from './contacts/contacts.module';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
-        entities: [join(process.cwd(), 'dist/**/*.enitity.js')],
+        entities: [Contact],
         synchronize: false
       })
     }),
