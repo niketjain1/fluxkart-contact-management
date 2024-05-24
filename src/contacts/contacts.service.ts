@@ -1,17 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateContactDto } from './dto/create-contact.dto';
-import { UpdateContactDto } from './dto/update-contact.dto';
 import { Contact } from './entities/contact.entity';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class ContactsService {
   constructor(
     @InjectRepository(Contact)
-    private readonly contactRepository: Repository<Contact>
-    ){};
+    private readonly contactRepository: Repository<Contact>,
+    @InjectEntityManager()
+    private readonly entityManager: EntityManager,
+  ) {}
 
+  async create({ email, linkedId, linkPrecedence, phoneNumber }) {
+    const requestBody = {
+      email,
+      linkedId,
+      linkPrecedence,
+      phoneNumber,
+    };
+    const contact = this.contactRepository.create(requestBody);
+  }
 
   async findAll() {
     return await this.contactRepository.find();
@@ -19,7 +28,7 @@ export class ContactsService {
 
   async findOneById(id: number) {
     return await this.contactRepository.find({
-      where: {id}
+      where: { id },
     });
   }
 
@@ -30,5 +39,12 @@ export class ContactsService {
       throw new NotFoundException();
     }
     return await this.contactRepository.remove(contact);
+  }
+
+  async resetContactSequence() {
+    await this.entityManager.query('DELETE FROM contact');
+    await this.entityManager.query(
+      'ALTER SEQUENCE contact_id_seq RESTART WITH 1',
+    );
   }
 }
