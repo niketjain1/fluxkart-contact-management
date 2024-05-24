@@ -1,29 +1,28 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity({name: 'contact'})
+@Entity()
 export class Contact {
-    @PrimaryGeneratedColumn()
-    id: number;
-  
-    @Column({ nullable: true })
-    phoneNumber: string;
-  
-    @Column({ nullable: true })
-    email: string;
-  
-    @ManyToOne(() => Contact, { nullable: true })
-    @JoinColumn({ name: "linkedId" })
-    linkedContact: Contact;
-  
-    @Column()
-    linkPrecedence: "primary" | "secondary";
-  
-    @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
-    createdAt: Date;
-  
-    @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP", onUpdate: "CURRENT_TIMESTAMP" })
-    updatedAt: Date;
-  
-    @Column({ type: "timestamp", nullable: true })
-    deletedAt: Date;
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ nullable: true })
+  phoneNumber: string;
+
+  @Column({ nullable: true })
+  email: string;
+
+  @Column({ nullable: true })
+  linkedId: number;
+
+  @Column({ type: 'enum', enum: ['primary', 'secondary'] })
+  linkPrecedence: 'primary' | 'secondary';
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @Column({ nullable: true })
+  deletedAt: Date;
 }
