@@ -139,11 +139,17 @@ export class ContactsService {
     return primaryContacts;
   }
 
+  // function to reduce the primary contacts such that it returns the oldest primary contact
+  private getOldestPrimaryContact(primaryContacts: Contact[]): Contact {
+    return primaryContacts.reduce((oldest, contact) => {
+      return oldest.createdAt < contact.createdAt ? oldest : contact;
+    });
+  }
+
   async identify(email?: string, phoneNumber?: string) {
     try {
       // Fetching all the contacts
       let contacts: Contact[] = await this.getContacts(email, phoneNumber);
-      let primaryContact: Contact;
 
       // if no contact found create a new primary contact
       if (contacts.length === 0) {
@@ -152,10 +158,7 @@ export class ContactsService {
   
       const potentialPrimaryContacts = await this.getPotentialPrimaryContacts(contacts);
 
-      // Reduce primary contacts if there are multiple
-      primaryContact = potentialPrimaryContacts.reduce((oldest, contact) => {
-        return oldest.createdAt < contact.createdAt ? oldest : contact;
-      });
+      const primaryContact = await this.getOldestPrimaryContact(potentialPrimaryContacts);
 
       // Link all other primary contacts to the oldest primary contact
       for (const contact of potentialPrimaryContacts) {
