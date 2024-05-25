@@ -146,6 +146,16 @@ export class ContactsService {
     });
   }
 
+  private async linkSecondaryContacts(primaryContacts: Contact[], primaryContact: Contact) {
+    for (const contact of primaryContacts) {
+      if (contact.id !== primaryContact.id) {
+        contact.linkPrecedence = 'secondary';
+        contact.linkedId = primaryContact.id;
+        await this.contactRepository.save(contact);
+      }
+    }
+  }
+
   async identify(email?: string, phoneNumber?: string) {
     try {
       // Fetching all the contacts
@@ -161,13 +171,8 @@ export class ContactsService {
       const primaryContact = await this.getOldestPrimaryContact(potentialPrimaryContacts);
 
       // Link all other primary contacts to the oldest primary contact
-      for (const contact of potentialPrimaryContacts) {
-        if (contact.id !== primaryContact.id) {
-          contact.linkPrecedence = 'secondary';
-          contact.linkedId = primaryContact.id;
-          await this.contactRepository.save(contact);
-        }
-      }
+      await this.linkSecondaryContacts(potentialPrimaryContacts, primaryContact);
+
 
       // Get all linked contacts, including primary and secondary
       const allLinkedContacts = await this.contactRepository.find({
