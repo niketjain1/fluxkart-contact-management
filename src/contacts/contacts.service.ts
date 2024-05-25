@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Contact } from './entities/contact.entity';
 import { EntityManager, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
@@ -103,11 +108,13 @@ export class ContactsService {
     primaryContact: Contact,
     emails: Set<string>,
     phoneNumbers: Set<string>,
-    secondaryContactIds: number[]
+    secondaryContactIds: number[],
   ) {
     // check if it is a new secondary contact
-    const isNewSecondaryContact = (email && !emails.has(email)) || (phoneNumber && !phoneNumbers.has(phoneNumber));
-  
+    const isNewSecondaryContact =
+      (email && !emails.has(email)) ||
+      (phoneNumber && !phoneNumbers.has(phoneNumber));
+
     if (isNewSecondaryContact) {
       const newSecondaryContact = this.contactRepository.create({
         email,
@@ -117,7 +124,7 @@ export class ContactsService {
       });
       await this.contactRepository.save(newSecondaryContact);
       secondaryContactIds.push(newSecondaryContact.id);
-  
+
       // add email and phoneNumber to the emails set and phoneNumbers set
       if (email) emails.add(email);
       if (phoneNumber) phoneNumbers.add(phoneNumber);
@@ -125,17 +132,21 @@ export class ContactsService {
   }
 
   // Function to find all the potential primary contacts
-  private async getPotentialPrimaryContacts(contacts: Contact[]): Promise<Contact[]> {
+  private async getPotentialPrimaryContacts(
+    contacts: Contact[],
+  ): Promise<Contact[]> {
     // Find all potential primary contacts, this is for the case when the request has multiple primary contacts
-    let primaryContacts = contacts.filter(contact => contact.linkPrecedence === 'primary');
-  
+    let primaryContacts = contacts.filter(
+      (contact) => contact.linkPrecedence === 'primary',
+    );
+
     // Checking if the request email is of type secondary email, if so we will find the potential primary contact
     if (contacts.length > 0 && contacts[0].linkPrecedence === 'secondary') {
       primaryContacts = await this.contactRepository.find({
-        where: { id: contacts[0].linkedId }
+        where: { id: contacts[0].linkedId },
       });
     }
-  
+
     return primaryContacts;
   }
 
@@ -146,7 +157,10 @@ export class ContactsService {
     });
   }
 
-  private async linkSecondaryContacts(primaryContacts: Contact[], primaryContact: Contact) {
+  private async linkSecondaryContacts(
+    primaryContacts: Contact[],
+    primaryContact: Contact,
+  ) {
     for (const contact of primaryContacts) {
       if (contact.id !== primaryContact.id) {
         contact.linkPrecedence = 'secondary';
@@ -156,11 +170,14 @@ export class ContactsService {
     }
   }
 
-  private extractContactInfo(allLinkedContacts: Contact[], primaryContact: Contact) {
+  private extractContactInfo(
+    allLinkedContacts: Contact[],
+    primaryContact: Contact,
+  ) {
     const emails = new Set<string>();
     const phoneNumbers = new Set<string>();
     const secondaryContactIds: number[] = [];
-  
+
     for (const contact of allLinkedContacts) {
       if (contact.email) emails.add(contact.email);
       if (contact.phoneNumber) phoneNumbers.add(contact.phoneNumber);
@@ -171,7 +188,7 @@ export class ContactsService {
 
     return { emails, phoneNumbers, secondaryContactIds };
   }
-  
+
   private formatResponse(
     primaryContact: Contact,
     secondaryContactIds: number[],
@@ -193,22 +210,23 @@ export class ContactsService {
       // Fetching all the contacts
       let contacts: Contact[] = await this.getContacts(email, phoneNumber);
 
-      if (!email || !phoneNumber) {
-        throw new Error('Either email or phone number field is null');
-      }
-
       // if no contact found create a new primary contact
-      if (contacts.length === 0) {
-        return await this.createPrimaryContact(email, phoneNumber);
+      if (email != null && phoneNumber != null && contacts.length === 0) {
+        await this.createPrimaryContact(email, phoneNumber);
       }
-  
-      const potentialPrimaryContacts = await this.getPotentialPrimaryContacts(contacts);
 
-      const primaryContact = await this.getOldestPrimaryContact(potentialPrimaryContacts);
+      const potentialPrimaryContacts =
+        await this.getPotentialPrimaryContacts(contacts);
+
+      const primaryContact = await this.getOldestPrimaryContact(
+        potentialPrimaryContacts,
+      );
 
       // Link all other primary contacts to the oldest primary contact
-      await this.linkSecondaryContacts(potentialPrimaryContacts, primaryContact);
-
+      await this.linkSecondaryContacts(
+        potentialPrimaryContacts,
+        primaryContact,
+      );
 
       // Get all linked contacts, including primary and secondary
       const allLinkedContacts = await this.contactRepository.find({
@@ -216,10 +234,18 @@ export class ContactsService {
       });
 
       // Extract emails, phone numbers, and secondary contact IDs
-      const { emails, phoneNumbers, secondaryContactIds } = this.extractContactInfo(allLinkedContacts, primaryContact);
+      const { emails, phoneNumbers, secondaryContactIds } =
+        this.extractContactInfo(allLinkedContacts, primaryContact);
 
       // Check if we need to create a new secondary contact
-      await this.handleNewSecondaryContact(email, phoneNumber, primaryContact, emails, phoneNumbers, secondaryContactIds);
+      await this.handleNewSecondaryContact(
+        email,
+        phoneNumber,
+        primaryContact,
+        emails,
+        phoneNumbers,
+        secondaryContactIds,
+      );
 
       return this.formatResponse(
         primaryContact,

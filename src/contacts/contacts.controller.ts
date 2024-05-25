@@ -1,19 +1,57 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Res,
+} from '@nestjs/common';
 import { ContactsService } from './contacts.service';
-
+import { Response } from 'express';
 
 @Controller()
 export class ContactsController {
   constructor(private readonly contactsService: ContactsService) {}
 
   @Post('create/contact')
-  create(@Body() body: {email: string; phoneNumber: string; linkedId?: number; linkPrecedence: 'primary' | 'secondary'}) {
-    return this.contactsService.create(body.email, body.phoneNumber, body.linkedId, body.linkPrecedence);
+  create(
+    @Body()
+    body: {
+      email: string;
+      phoneNumber: string;
+      linkedId?: number;
+      linkPrecedence: 'primary' | 'secondary';
+    },
+  ) {
+    return this.contactsService.create(
+      body.email,
+      body.phoneNumber,
+      body.linkedId,
+      body.linkPrecedence,
+    );
   }
 
   @Post('identify')
-  async identify(@Body() body: { email?: string; phoneNumber?: string }) {
-    return await this.contactsService.identify(body.email, body.phoneNumber);
+  async identify(
+    @Body() body: { email?: string; phoneNumber?: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.contactsService.identify(
+        body.email,
+        body.phoneNumber,
+      );
+      return res.status(200).json(result);
+    } catch (error) {
+      return res
+        .status(500)
+        .json({
+          message:
+            'An error occurred identifying the contact or creating the contact, please check if the response is not null',
+        });
+    }
   }
 
   @Get('find_contacts')
