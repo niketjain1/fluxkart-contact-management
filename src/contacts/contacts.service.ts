@@ -156,6 +156,22 @@ export class ContactsService {
     }
   }
 
+  private extractContactInfo(allLinkedContacts: Contact[], primaryContact: Contact) {
+    const emails = new Set<string>();
+    const phoneNumbers = new Set<string>();
+    const secondaryContactIds: number[] = [];
+  
+    for (const contact of allLinkedContacts) {
+      if (contact.email) emails.add(contact.email);
+      if (contact.phoneNumber) phoneNumbers.add(contact.phoneNumber);
+      if (contact.id !== primaryContact.id) {
+        secondaryContactIds.push(contact.id);
+      }
+    }
+
+    return { emails, phoneNumbers, secondaryContactIds };
+  }
+  
   async identify(email?: string, phoneNumber?: string) {
     try {
       // Fetching all the contacts
@@ -179,18 +195,8 @@ export class ContactsService {
         where: [{ id: primaryContact.id }, { linkedId: primaryContact.id }],
       });
 
-      // Store emails, phone numbers, and secondary contact IDs
-      const emails = new Set<string>();
-      const phoneNumbers = new Set<string>();
-      const secondaryContactIds: number[] = [];
-
-      for (const contact of allLinkedContacts) {
-        if (contact.email) emails.add(contact.email);
-        if (contact.phoneNumber) phoneNumbers.add(contact.phoneNumber);
-        if (contact.id !== primaryContact.id) {
-          secondaryContactIds.push(contact.id);
-        }
-      }
+      // Extract emails, phone numbers, and secondary contact IDs
+      const { emails, phoneNumbers, secondaryContactIds } = this.extractContactInfo(allLinkedContacts, primaryContact);
 
       // Check if we need to create a new secondary contact
       await this.handleNewSecondaryContact(email, phoneNumber, primaryContact, emails, phoneNumbers, secondaryContactIds);
