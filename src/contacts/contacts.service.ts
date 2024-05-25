@@ -141,8 +141,8 @@ export class ContactsService {
   // }
 
   async identify(email?: string, phoneNumber?: string) {
-    let primaryContact: Contact | null = null;
     let contacts: Contact[] = [];
+    let primaryContact: Contact;
 
     if (email || phoneNumber) {
       contacts = await this.contactRepository.find({
@@ -204,7 +204,7 @@ export class ContactsService {
       if (email) emails.add(email);
       if (phoneNumber) phoneNumbers.add(phoneNumber);
     }
-    
+
     return this.formatResponse(
       primaryContact,
       secondaryContactIds,
