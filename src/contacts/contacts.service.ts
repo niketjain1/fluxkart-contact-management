@@ -85,12 +85,6 @@ export class ContactsService {
       let contacts: Contact[] = await this.getContacts(email, phoneNumber);
       let primaryContact: Contact;
 
-      if (email || phoneNumber) {
-        contacts = await this.contactRepository.find({
-          where: [{ email }, { phoneNumber }],
-        });
-      }
-
       // if no contact found create a new primary contact
       if (contacts.length === 0) {
         const newContact = this.contactRepository.create({
