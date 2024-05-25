@@ -49,7 +49,7 @@ export class ContactsController {
         .status(500)
         .json({
           message:
-            'An error occurred identifying the contact or creating the contact, please check if the response is not null',
+            'An error occurred identifying or creating the contact, please check if the request is not null',
         });
     }
   }
