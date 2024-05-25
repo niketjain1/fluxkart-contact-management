@@ -97,6 +97,33 @@ export class ContactsService {
     };
   }
 
+  private async handleNewSecondaryContact(
+    email: string | undefined,
+    phoneNumber: string | undefined,
+    primaryContact: Contact,
+    emails: Set<string>,
+    phoneNumbers: Set<string>,
+    secondaryContactIds: number[]
+  ) {
+    // check if it is a new secondary contact
+    const isNewSecondaryContact = (email && !emails.has(email)) || (phoneNumber && !phoneNumbers.has(phoneNumber));
+  
+    if (isNewSecondaryContact) {
+      const newSecondaryContact = this.contactRepository.create({
+        email,
+        phoneNumber,
+        linkedId: primaryContact.id,
+        linkPrecedence: 'secondary',
+      });
+      await this.contactRepository.save(newSecondaryContact);
+      secondaryContactIds.push(newSecondaryContact.id);
+  
+      // add email and phoneNumber to the emails set and phoneNumbers set
+      if (email) emails.add(email);
+      if (phoneNumber) phoneNumbers.add(phoneNumber);
+    }
+  }
+
   async identify(email?: string, phoneNumber?: string) {
     try {
       // Fetching all the contacts
@@ -157,23 +184,7 @@ export class ContactsService {
       }
 
       // Check if we need to create a new secondary contact
-      const isNewSecondaryContact =
-        (email && !emails.has(email)) ||
-        (phoneNumber && !phoneNumbers.has(phoneNumber));
-
-      if (isNewSecondaryContact) {
-        const newSecondaryContact = this.contactRepository.create({
-          email,
-          phoneNumber,
-          linkedId: primaryContact.id,
-          linkPrecedence: 'secondary',
-        });
-        await this.contactRepository.save(newSecondaryContact);
-        secondaryContactIds.push(newSecondaryContact.id);
-
-        if (email) emails.add(email);
-        if (phoneNumber) phoneNumbers.add(phoneNumber);
-      }
+      await this.handleNewSecondaryContact(email, phoneNumber, primaryContact, emails, phoneNumbers, secondaryContactIds);
 
       return this.formatResponse(
         primaryContact,
