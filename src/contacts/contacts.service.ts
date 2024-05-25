@@ -135,20 +135,16 @@ export class ContactsService {
         return await this.createPrimaryContact(email, phoneNumber);
       }
   
-      // Find all primary contacts, this is for the case when the request has multiple primary contacts
+      // Find all potential primary contacts, this is for the case when the request has multiple primary contacts
       let potentialPrimaryContacts = contacts.filter(
         (contact) => contact.linkPrecedence === 'primary',
       );
 
-      // Checking if the request email is of type secondary email
+      // Checking if the request email is of type secondary email, if so we will find the potential primary contact
       if (contacts && contacts[0].linkPrecedence === 'secondary') {
         potentialPrimaryContacts = await this.contactRepository.find({
           where: { id: contacts[0].linkedId },
         });
-      }
-      // If no primary contact is found, treat the first contact as primary
-      else if (potentialPrimaryContacts.length === 0) {
-        potentialPrimaryContacts = [contacts[0]];
       }
 
       // Reduce primary contacts if there are multiple
