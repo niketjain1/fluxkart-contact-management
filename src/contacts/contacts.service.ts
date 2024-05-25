@@ -79,6 +79,24 @@ export class ContactsService {
     return [];
   }
 
+  // function to create primary contact
+  private async createPrimaryContact(email?: string, phoneNumber?: string) {
+    const newContact = this.contactRepository.create({
+      email,
+      phoneNumber,
+      linkPrecedence: 'primary',
+    });
+    await this.contactRepository.save(newContact);
+    return {
+      contact: {
+        primaryContactId: newContact.id,
+        emails: [newContact.email],
+        phoneNumbers: [newContact.phoneNumber],
+        secondaryContactIds: [],
+      },
+    };
+  }
+
   async identify(email?: string, phoneNumber?: string) {
     try {
       // Fetching all the contacts
@@ -87,22 +105,9 @@ export class ContactsService {
 
       // if no contact found create a new primary contact
       if (contacts.length === 0) {
-        const newContact = this.contactRepository.create({
-          email,
-          phoneNumber,
-          linkPrecedence: 'primary',
-        });
-        await this.contactRepository.save(newContact);
-        return {
-          contact: {
-            primaryContactId: newContact.id,
-            emails: [newContact.email],
-            phoneNumbers: [newContact.phoneNumber],
-            secondaryContactIds: [],
-          },
-        };
+        return await this.createPrimaryContact(email, phoneNumber);
       }
-
+  
       // Find all primary contacts, this is for the case when the request has multiple primary contacts
       let potentialPrimaryContacts = contacts.filter(
         (contact) => contact.linkPrecedence === 'primary',
