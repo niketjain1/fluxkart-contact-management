@@ -40,13 +40,13 @@ export class ContactsService {
 
   async findByLinkedId(id: number) {
     return await this.contactRepository.find({
-      where: { linkedId: id }
-    })
+      where: { linkedId: id },
+    });
   }
 
   async findOneByEmail(email: string) {
     return await this.contactRepository.find({
-      where: { email }
+      where: { email },
     });
   }
 
@@ -66,21 +66,100 @@ export class ContactsService {
     );
   }
 
+  // async identify(email?: string, phoneNumber?: string) {
+  //   let primaryContact: Contact;
+  //   let contacts: Contact[] = [];
+
+  //   if (email || phoneNumber) {
+  //     contacts = await this.contactRepository.find({
+  //       where: [{ email }, { phoneNumber }],
+  //     });
+  //   }
+  //   // if (!contacts.length && phoneNumber) {
+  //   //   contacts = await this.contactRepository.find({ where: { phoneNumber } });
+  //   // }
+
+  //   if (contacts.length !== 0 && contacts[0].linkPrecedence === 'secondary') {
+  //     primaryContact = await this.findOneById(contacts[0].linkedId);
+  //   } else {
+  //     primaryContact = contacts[0];
+  //   }
+
+  //   if (!primaryContact) {
+  //     const newContact = this.contactRepository.create({
+  //       email,
+  //       phoneNumber,
+  //       linkPrecedence: 'primary',
+  //     });
+  //     await this.contactRepository.save(newContact);
+  //     return this.formatResponse(newContact, []);
+  //   }
+
+  //   const secondaryContacts = await this.findByLinkedId(primaryContact.id);
+
+  //   const isNewSecondaryContact =
+  //     email &&
+  //     phoneNumber &&
+  //     secondaryContacts.some(
+  //       (contact) =>
+  //         contact.email === email && contact.phoneNumber === phoneNumber,
+  //     );
+
+  //   if (!isNewSecondaryContact) {
+  //     const newSecondaryContact = this.contactRepository.create({
+  //       email,
+  //       phoneNumber,
+  //       linkedId: primaryContact.id,
+  //       linkPrecedence: 'secondary',
+  //     });
+  //     await this.contactRepository.save(newSecondaryContact);
+  //     secondaryContacts.push(newSecondaryContact);
+  //   }
+
+  //   return this.formatResponse(primaryContact, secondaryContacts);
+  // }
+
+  // private formatResponse(primary: Contact, secondaries: Contact[]) {
+  //   const phoneNumbersSet = new Set<string>([primary.phoneNumber]);
+  //   secondaries.forEach((secondary) => {
+  //     if (secondary.phoneNumber) {
+  //       phoneNumbersSet.add(secondary.phoneNumber);
+  //     }
+  //   });
+
+  //   return {
+  //     contact: {
+  //       primaryContactId: primary.id,
+  //       emails: [
+  //         primary.email,
+  //         ...secondaries.map((s) => s.email).filter(Boolean),
+  //       ],
+  //       phoneNumbers: Array.from(phoneNumbersSet),
+  //       secondaryContactIds: secondaries.map((s) => s.id),
+  //     },
+  //   };
+  // }
+
   async identify(email?: string, phoneNumber?: string) {
-    let primaryContact: Contact;
+    let primaryContact: Contact | null = null;
     let contacts: Contact[] = [];
 
-    if (email) {
-      contacts = await this.contactRepository.find({ where: { email } });
-    }
-    if (!contacts.length && phoneNumber) {
-      contacts = await this.contactRepository.find({ where: { phoneNumber } });
+    if (email || phoneNumber) {
+      contacts = await this.contactRepository.find({
+        where: [{ email }, { phoneNumber }],
+      });
     }
 
-    if (contacts[0].linkPrecedence === 'secondary') {
-      primaryContact = await this.findOneById(contacts[0].linkedId);
-    } else {
-      primaryContact = contacts[0];
+    if (contacts.length > 0) {
+      primaryContact =
+        contacts.find((contact) => contact.linkPrecedence === 'primary') ||
+        null;
+
+      if (!primaryContact) {
+        primaryContact = await this.contactRepository.findOne({
+          where: { id: contacts[0].linkedId },
+        });
+      }
     }
 
     if (!primaryContact) {
@@ -90,19 +169,38 @@ export class ContactsService {
         linkPrecedence: 'primary',
       });
       await this.contactRepository.save(newContact);
-      return this.formatResponse(newContact, []);
+      return {
+        contact: {
+          primaryContactId: newContact.id,
+          emails: [newContact.email],
+          phoneNumbers: [newContact.phoneNumber],
+          secondaryContactIds: [],
+        },
+      };
     }
 
+    const allLinkedContacts = await this.contactRepository.find({
+      where: [{ id: primaryContact.id }, { linkedId: primaryContact.id }],
+    });
 
-    const secondaryContacts = await this.findByLinkedId(primaryContact.id)
+    const emails = new Set<string>();
+    const phoneNumbers = new Set<string>();
+    const secondaryContactIds: number[] = [];
+
+    for (const contact of allLinkedContacts) {
+      if (contact.id === primaryContact.id) {
+        if (contact.email) emails.add(contact.email);
+        if (contact.phoneNumber) phoneNumbers.add(contact.phoneNumber);
+      } else {
+        if (contact.email) emails.add(contact.email);
+        if (contact.phoneNumber) phoneNumbers.add(contact.phoneNumber);
+        secondaryContactIds.push(contact.id);
+      }
+    }
 
     const isNewSecondaryContact =
-      email &&
-      phoneNumber &&
-      secondaryContacts.some(
-        (contact) =>
-          contact.email === email && contact.phoneNumber === phoneNumber,
-      );
+      (email && !emails.has(email)) ||
+      (phoneNumber && !phoneNumbers.has(phoneNumber));
 
     if (isNewSecondaryContact) {
       const newSecondaryContact = this.contactRepository.create({
@@ -112,29 +210,32 @@ export class ContactsService {
         linkPrecedence: 'secondary',
       });
       await this.contactRepository.save(newSecondaryContact);
-      secondaryContacts.push(newSecondaryContact);
-    }
+      secondaryContactIds.push(newSecondaryContact.id);
 
-    return this.formatResponse(primaryContact, secondaryContacts);
+      if (email) emails.add(email);
+      if (phoneNumber) phoneNumbers.add(phoneNumber);
+    }
+    
+    return this.formatResponse(
+      primaryContact,
+      secondaryContactIds,
+      emails,
+      phoneNumbers,
+    );
   }
 
-  private formatResponse(primary: Contact, secondaries: Contact[]) {
-    const phoneNumbersSet = new Set<string>([primary.phoneNumber]);
-    secondaries.forEach((secondary) => {
-      if (secondary.phoneNumber) {
-        phoneNumbersSet.add(secondary.phoneNumber);
-      }
-    });
-
+  private formatResponse(
+    primaryContact: Contact,
+    secondaryContactIds: number[],
+    emails: Set<string>,
+    phoneNumbers: Set<string>,
+  ) {
     return {
       contact: {
-        primaryContactId: primary.id,
-        emails: [
-          primary.email,
-          ...secondaries.map((s) => s.email).filter(Boolean),
-        ],
-        phoneNumbers: Array.from(phoneNumbersSet),
-        secondaryContactIds: secondaries.map((s) => s.id),
+        primaryContactId: primaryContact.id,
+        emails: Array.from(emails),
+        phoneNumbers: Array.from(phoneNumbers),
+        secondaryContactIds,
       },
     };
   }
