@@ -124,6 +124,21 @@ export class ContactsService {
     }
   }
 
+  // Function to find all the potential primary contacts
+  private async getPotentialPrimaryContacts(contacts: Contact[]): Promise<Contact[]> {
+    // Find all potential primary contacts, this is for the case when the request has multiple primary contacts
+    let primaryContacts = contacts.filter(contact => contact.linkPrecedence === 'primary');
+  
+    // Checking if the request email is of type secondary email, if so we will find the potential primary contact
+    if (contacts.length > 0 && contacts[0].linkPrecedence === 'secondary') {
+      primaryContacts = await this.contactRepository.find({
+        where: { id: contacts[0].linkedId }
+      });
+    }
+  
+    return primaryContacts;
+  }
+
   async identify(email?: string, phoneNumber?: string) {
     try {
       // Fetching all the contacts
@@ -135,17 +150,7 @@ export class ContactsService {
         return await this.createPrimaryContact(email, phoneNumber);
       }
   
-      // Find all potential primary contacts, this is for the case when the request has multiple primary contacts
-      let potentialPrimaryContacts = contacts.filter(
-        (contact) => contact.linkPrecedence === 'primary',
-      );
-
-      // Checking if the request email is of type secondary email, if so we will find the potential primary contact
-      if (contacts && contacts[0].linkPrecedence === 'secondary') {
-        potentialPrimaryContacts = await this.contactRepository.find({
-          where: { id: contacts[0].linkedId },
-        });
-      }
+      const potentialPrimaryContacts = await this.getPotentialPrimaryContacts(contacts);
 
       // Reduce primary contacts if there are multiple
       primaryContact = potentialPrimaryContacts.reduce((oldest, contact) => {
