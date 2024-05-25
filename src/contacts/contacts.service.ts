@@ -193,6 +193,10 @@ export class ContactsService {
       // Fetching all the contacts
       let contacts: Contact[] = await this.getContacts(email, phoneNumber);
 
+      if (!email || !phoneNumber) {
+        throw new Error('Either email or phone number field is null');
+      }
+
       // if no contact found create a new primary contact
       if (contacts.length === 0) {
         return await this.createPrimaryContact(email, phoneNumber);
