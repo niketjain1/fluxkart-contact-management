@@ -168,25 +168,55 @@ export class ContactsService {
       };
     }
 
+    // Find all primary contacts, this is for the case when the request has multiple primary contacts
+    let potentialPrimaryContacts = contacts.filter(
+      (contact) => contact.linkPrecedence === 'primary',
+    );
+
+    // Checking if the request email is of type secondary email 
+    if (contacts && contacts[0].linkPrecedence === 'secondary') {
+      potentialPrimaryContacts = await this.contactRepository.find({
+        where: { id: contacts[0].linkedId }
+      })
+    }
+    // If no primary contact is found, treat the first contact as primary
+    else if (potentialPrimaryContacts.length === 0) {
+      potentialPrimaryContacts = [contacts[0]];
+    }
+
+    // Reduce primary contacts if there are multiple
+    primaryContact = potentialPrimaryContacts.reduce((oldest, contact) => {
+      return oldest.createdAt < contact.createdAt ? oldest : contact;
+    });
+
+    // Link all other primary contacts to the oldest primary contact
+    for (const contact of potentialPrimaryContacts) {
+      if (contact.id !== primaryContact.id) {
+        contact.linkPrecedence = 'secondary';
+        contact.linkedId = primaryContact.id;
+        await this.contactRepository.save(contact);
+      }
+    }
+
+    // Get all linked contacts, including primary and secondary
     const allLinkedContacts = await this.contactRepository.find({
       where: [{ id: primaryContact.id }, { linkedId: primaryContact.id }],
     });
 
+    // Store emails, phone numbers, and secondary contact IDs
     const emails = new Set<string>();
     const phoneNumbers = new Set<string>();
     const secondaryContactIds: number[] = [];
 
     for (const contact of allLinkedContacts) {
-      if (contact.id === primaryContact.id) {
-        if (contact.email) emails.add(contact.email);
-        if (contact.phoneNumber) phoneNumbers.add(contact.phoneNumber);
-      } else {
-        if (contact.email) emails.add(contact.email);
-        if (contact.phoneNumber) phoneNumbers.add(contact.phoneNumber);
+      if (contact.email) emails.add(contact.email);
+      if (contact.phoneNumber) phoneNumbers.add(contact.phoneNumber);
+      if (contact.id !== primaryContact.id) {
         secondaryContactIds.push(contact.id);
       }
     }
 
+    // Check if we need to create a new secondary contact
     const isNewSecondaryContact =
       (email && !emails.has(email)) ||
       (phoneNumber && !phoneNumbers.has(phoneNumber));
