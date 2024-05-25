@@ -12,7 +12,7 @@ export class ContactsService {
     private readonly entityManager: EntityManager,
   ) {}
 
-  async create({ email, linkedId, linkPrecedence, phoneNumber }) {
+  async create(email, phoneNumber, linkedId, linkPrecedence) {
     const requestBody = {
       email,
       linkedId,
