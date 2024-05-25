@@ -172,6 +172,22 @@ export class ContactsService {
     return { emails, phoneNumbers, secondaryContactIds };
   }
   
+  private formatResponse(
+    primaryContact: Contact,
+    secondaryContactIds: number[],
+    emails: Set<string>,
+    phoneNumbers: Set<string>,
+  ) {
+    return {
+      contact: {
+        primaryContactId: primaryContact.id,
+        emails: Array.from(emails),
+        phoneNumbers: Array.from(phoneNumbers),
+        secondaryContactIds,
+      },
+    };
+  }
+
   async identify(email?: string, phoneNumber?: string) {
     try {
       // Fetching all the contacts
@@ -211,21 +227,5 @@ export class ContactsService {
       console.error('Error Identifying contact: ', error);
       throw new Error('An error occured identifying the contact');
     }
-  }
-
-  private formatResponse(
-    primaryContact: Contact,
-    secondaryContactIds: number[],
-    emails: Set<string>,
-    phoneNumbers: Set<string>,
-  ) {
-    return {
-      contact: {
-        primaryContactId: primaryContact.id,
-        emails: Array.from(emails),
-        phoneNumbers: Array.from(phoneNumbers),
-        secondaryContactIds,
-      },
-    };
   }
 }
