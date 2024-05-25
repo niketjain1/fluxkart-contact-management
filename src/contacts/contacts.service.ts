@@ -150,19 +150,8 @@ export class ContactsService {
       });
     }
 
-    if (contacts.length > 0) {
-      primaryContact =
-        contacts.find((contact) => contact.linkPrecedence === 'primary') ||
-        null;
-
-      if (!primaryContact) {
-        primaryContact = await this.contactRepository.findOne({
-          where: { id: contacts[0].linkedId },
-        });
-      }
-    }
-
-    if (!primaryContact) {
+    // if no contact found create a new primary contact
+    if (contacts.length === 0) {
       const newContact = this.contactRepository.create({
         email,
         phoneNumber,
