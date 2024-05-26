@@ -212,7 +212,7 @@ export class ContactsService {
 
       // if no contact found create a new primary contact
       if (email != null && phoneNumber != null && contacts.length === 0) {
-        await this.createPrimaryContact(email, phoneNumber);
+        return await this.createPrimaryContact(email, phoneNumber);
       }
 
       const potentialPrimaryContacts =
