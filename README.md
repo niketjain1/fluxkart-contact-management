@@ -1,8 +1,65 @@
-### Contact Identification Service
-This repository contains a Node.js service for identifying contacts based on email and phone number inputs.
+# Contact Identifier Service
 
-### Overview
-The Contact Identification Service is designed to fetch contacts from a database, create new primary contacts if necessary, and provide information about identified contacts.
+This project is a web service for identifying and consolidating contacts based on provided email and phone number. It can handle cases where contacts may overlap and need to be linked or converted from primary to secondary.
+
+## Hosted Service
+
+The service is hosted at: [https://contact-identifier-yu5a.onrender.com](https://contact-identifier-yu5a.onrender.com)
+
+## Endpoints
+
+### Identify Contact
+
+**Endpoint:** `/identify`
+
+**Method:** `POST`
+
+**Description:** This endpoint identifies and consolidates contact information based on the provided email and phone number. If the contact information overlaps with existing contacts, it links them appropriately.
+
+**Request Body:**
+```json
+{
+  "email": "string",
+  "phoneNumber": "string"
+}
+```
+**Response Body:**
+
+```json
+{
+  "contact": {
+    "primaryContactId": number,
+    "emails": ["string"],
+    "phoneNumbers": ["string"],
+    "secondaryContactIds": [number]
+  }
+}
+```
+
+**Find All Contacts**
+
+Endpoint: `/find_contacts`
+
+Method: `GET`
+
+Description: This endpoint retrieves all contacts stored in the database.
+
+**Response:**
+
+```json
+[
+  {
+    "id": number,
+    "email": "string",
+    "phoneNumber": "string",
+    "linkedId": number,
+    "linkPrecedence": "string",
+    "createdAt": "date-time",
+    "updatedAt": "date-time",
+    "deletedAt": "date-time"
+  }
+]
+```
 
 ### Features
 - Contact Identification: The service identifies contacts based on provided email and phone number inputs.
@@ -15,19 +72,18 @@ To run the Contact Identification Service locally, follow these steps:
 1) Clone the repository to your local machine:
 
 ```bash
-Copy code
-git clone https://github.com/your-username/contact-identification-service.git
+git clone https://github.com/niketjain1/fluxkart-contact-management.git
 ```
 
 2) Install dependencies:
 
 ```bash
-Copy code
-cd contact-identification-service
+cd fluxkart-contact-management
 npm install
 ```
 
 3) Set up the required environment variables.
+- Set up db configuration in the .env file. {This is to be done locally}
 
 4) Start the service:
 ```bash
@@ -37,11 +93,32 @@ npm start
 ### Usage
 To use the Contact Identification Service, send HTTP requests to the appropriate endpoints. Here's an example using cURL:
 
+Testing locally -
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"email": "example@example.com", "phoneNumber": "1234567890"}' http://localhost:3000/identify
+curl --location 'http://localhost:3000/identify' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "kjklj@gmail.com",
+    "phoneNumber": "123554"
+}
+'
 ```
 
-### Tech stack used
-- NestJs
-- TypeORM
-- Postgres
+Testing on production - 
+```bash
+curl --location 'https://contact-identifier-yu5a.onrender.com/identify' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "example@example.com",
+    "phoneNumber": "123453236"
+}
+'
+```
+
+### Tech Stack Used
+- Node.js: JavaScript runtime for building scalable network applications.
+- NestJS: A progressive Node.js framework for building efficient and reliable server-side applications.
+- TypeScript: A typed superset of JavaScript that compiles to plain JavaScript.
+- TypeORM: An ORM for TypeScript and JavaScript (ES7, ES6, ES5).
+- PostgreSQL: A powerful, open-source object-relational database system.
+- Render: A unified cloud platform to build and run all your apps and websites with free SSL, a global CDN, private networks, and auto-deploys from Git.
