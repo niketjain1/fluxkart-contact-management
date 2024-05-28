@@ -204,58 +204,79 @@ export class ContactsService {
       },
     };
   }
-
+  
   async identify(email?: string, phoneNumber?: string) {
     try {
       // Fetching all the contacts
       let contacts: Contact[] = await this.getContacts(email, phoneNumber);
-
+  
       // if no contact found create a new primary contact
       if (email != null && phoneNumber != null && contacts.length === 0) {
         return await this.createPrimaryContact(email, phoneNumber);
       }
-
-      const potentialPrimaryContacts =
-        await this.getPotentialPrimaryContacts(contacts);
-
-      const primaryContact = await this.getOldestPrimaryContact(
-        potentialPrimaryContacts,
-      );
-
-      // Link all other primary contacts to the oldest primary contact
-      await this.linkSecondaryContacts(
-        potentialPrimaryContacts,
-        primaryContact,
-      );
-
-      // Get all linked contacts, including primary and secondary
-      const allLinkedContacts = await this.contactRepository.find({
-        where: [{ id: primaryContact.id }, { linkedId: primaryContact.id }],
+  
+      // Get all primary contacts directly associated with the given email or phoneNumber
+      let primaryContacts = await this.getPotentialPrimaryContacts(contacts);
+  
+      // Collect all related contacts, including secondary ones linked to these primary contacts
+      let allRelatedContacts = new Set<Contact>(contacts);
+  
+      for (const primaryContact of primaryContacts) {
+        const relatedContacts = await this.contactRepository.find({
+          where: [
+            { id: primaryContact.id },
+            { linkedId: primaryContact.id }
+          ],
+        });
+        relatedContacts.forEach(contact => allRelatedContacts.add(contact));
+      }
+  
+      // Ensure all related contacts are linked to the oldest primary contact
+      const primaryContactsArray = Array.from(primaryContacts);
+      const oldestPrimaryContact = this.getOldestPrimaryContact(primaryContactsArray);
+  
+      await this.linkSecondaryContacts(primaryContactsArray, oldestPrimaryContact);
+  
+      // Update all related contacts to point to the oldest primary contact
+      for (const contact of allRelatedContacts) {
+        if (contact.linkPrecedence === 'primary' && contact.id !== oldestPrimaryContact.id) {
+          contact.linkPrecedence = 'secondary';
+          contact.linkedId = oldestPrimaryContact.id;
+          await this.contactRepository.save(contact);
+        }
+      }
+  
+      // Get all final linked contacts, including primary and secondary
+      const finalLinkedContacts = await this.contactRepository.find({
+        where: [
+          { id: oldestPrimaryContact.id },
+          { linkedId: oldestPrimaryContact.id }
+        ],
       });
-
+  
       // Extract emails, phone numbers, and secondary contact IDs
       const { emails, phoneNumbers, secondaryContactIds } =
-        this.extractContactInfo(allLinkedContacts, primaryContact);
-
+        this.extractContactInfo(finalLinkedContacts, oldestPrimaryContact);
+  
       // Check if we need to create a new secondary contact
       await this.handleNewSecondaryContact(
         email,
         phoneNumber,
-        primaryContact,
+        oldestPrimaryContact,
         emails,
         phoneNumbers,
         secondaryContactIds,
       );
-
+  
       return this.formatResponse(
-        primaryContact,
+        oldestPrimaryContact,
         secondaryContactIds,
         emails,
         phoneNumbers,
       );
     } catch (error) {
       console.error('Error Identifying contact: ', error);
-      throw new Error('An error occured identifying the contact');
+      throw new Error('An error occurred identifying the contact');
     }
   }
 }
