@@ -38,7 +38,7 @@ The service is hosted at: [https://contact-identifier-yu5a.onrender.com](https:/
 
 **Find All Contacts**
 
-Endpoint: `/find_contacts`
+Endpoint: `/contacts`
 
 Method: `GET`
 

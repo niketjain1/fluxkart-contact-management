@@ -54,7 +54,7 @@ export class ContactsController {
     }
   }
 
-  @Get('find_contacts')
+  @Get('contacts')
   findAll() {
     return this.contactsService.findAll();
   }
