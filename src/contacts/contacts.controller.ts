@@ -39,6 +39,11 @@ export class ContactsController {
     @Res() res: Response,
   ) {
     try {
+      if (!body.email && !body.phoneNumber) {
+        return res.status(400).json({
+          message: 'Both the email field and the phoneNumber field cannot be null',
+        })
+      }
       const result = await this.contactsService.identify(
         body.email,
         body.phoneNumber,
@@ -49,7 +54,7 @@ export class ContactsController {
         .status(500)
         .json({
           message:
-            'An error occurred identifying or creating the contact, please check if the request is not null',
+            'An error occurred identifying or creating the contact',
         });
     }
   }

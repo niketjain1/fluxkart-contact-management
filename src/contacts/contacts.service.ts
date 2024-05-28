@@ -211,7 +211,7 @@ export class ContactsService {
       let contacts: Contact[] = await this.getContacts(email, phoneNumber);
   
       // if no contact found create a new primary contact
-      if (email != null && phoneNumber != null && contacts.length === 0) {
+      if (contacts.length === 0) {
         return await this.createPrimaryContact(email, phoneNumber);
       }
   
